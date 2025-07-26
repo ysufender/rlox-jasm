@@ -2,8 +2,8 @@
 
 JASM IL and JASM Bytecode generating lox compiler written in rust.
 
-Base compiler (lexing, parsing, AST) : [Emirhan Tala](https://github.com/Emivvvvv) 
-JASM IL and Bytecode generation      : [Yusuf Ender Osmanoğlu](https://github.com/ysufender)
+Base compiler (lexing, parsing, AST) : [Emirhan Tala](https://github.com/Emivvvvv)  
+JASM IL and Bytecode generation      : [Yusuf Ender Osmanoğlu](https://github.com/ysufender)  
 
 This repo is forked from [rlox by Emirhan Tala](https://github.com/Emivvvvv/rlox);
 
@@ -13,8 +13,7 @@ This repo is forked from [rlox by Emirhan Tala](https://github.com/Emivvvvv/rlox
 > for the inconvenience.
 
 # rlox-jasm roadmap
-IL and Bytecode generation from rlox AST.
-<br>
+IL and Bytecode generation from rlox AST.  
 
 |                       Chapter                        | Status |
 |:----------------------------------------------------:|:------:|
