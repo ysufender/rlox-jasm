@@ -1,6 +1,6 @@
 use crate::lexer::token::{Hf64, Token, TokenType, Literal};
 use crate::lox::report;
-use crate::symbol::SymbolTable;
+use crate::symbol::{Symbol, SymbolTable};
 
 pub struct Scanner<'a> {
     source: &'a str,
@@ -32,7 +32,7 @@ impl<'a> Scanner<'a> {
 
         let _ = &self.tokens.push(Token::new(
             TokenType::Eof,
-            self.symbol_table.intern(""),
+            Symbol(0),
             Literal::Nil,
             self.line,
         ));

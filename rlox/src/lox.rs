@@ -7,6 +7,7 @@ use std::io;
 use std::io::{stdin, stdout, BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
 
+use crate::expr::ExprIdx;
 use crate::interpreter::{Interpreter, RuntimeError};
 use crate::lexer::scanner;
 use crate::lexer::token::{ErrorToken, TokenType};
@@ -83,8 +84,6 @@ pub fn build_files(files: &[&str]) -> Result<Vec<String>, LoxError> {
             source_path.file_stem().unwrap().to_str().unwrap()
         ));
         
-        println!("Assembling IL at {}", dest_path.as_path().to_str().unwrap());
-        println!("Invoking {}", env::current_exe()?.parent().unwrap().join("jasm").to_str().unwrap());
         let status = Command::new(env::current_exe()?.parent().unwrap().join("jasm"))
             .args(["-s", "-I", &il_file, "-o", dest_path.as_path().to_str().unwrap()])
             .status()?;
@@ -110,7 +109,6 @@ pub fn jasm_files(files: &[&str]) -> Result<Vec<String>, LoxError> {
             source_path.file_stem().unwrap().to_str().unwrap()
         ));
 
-        println!("Generating IL at {}", dest_path.as_path().to_str().unwrap());
         let mut output = File::create(&dest_path)?;
         write!(output,
 "This file has been generated automatically by rlox-jasm.
@@ -121,7 +119,7 @@ rlox-jasm, JASM IL and Bytecode generation for rlox by Yusuf Ender Osmanoğlu.
     org main
     sts 1024
     sth 1024
-.body")?;
+.body\n")?;
 
         // turn AST into bytecode
         let src = std::fs::read_to_string(source)?;
@@ -165,7 +163,7 @@ pub fn run_prompt() -> Result<(), LoxError> {
 }
 
 pub fn run(source: &str, out: &mut File) -> Result<(), LoxError> {
-    let mut symbol_table = SymbolTable::new();
+    let mut symbol_table = SymbolTable::new(); // For the lexer.
     let lexer_tokens = {
         let mut lexer = scanner::Scanner::new(source, &mut symbol_table);
         lexer.scan_tokens();
@@ -180,14 +178,13 @@ pub fn run(source: &str, out: &mut File) -> Result<(), LoxError> {
 
     let locals = Resolver::new(&expr_pool, &mut symbol_table).resolve_lox(&statements);
 
-    check_errors()?;
-    
     // TODO: The IL generation from AST should be made here.
     // I might use the existing interpreter to convert it
     // Evaluable.evaluate() does the work it seems.
 
     let mut interpreter = Interpreter::new(&expr_pool, &mut symbol_table, locals);
     interpreter.interpret(&statements);
+    interpreter.gen_il(&statements, out);
 
     Ok(())
 }

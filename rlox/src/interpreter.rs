@@ -1,4 +1,6 @@
 use std::cell::RefCell;
+use std::fs::File;
+use std::io::Write;
 use rustc_hash::FxHashMap;
 use std::rc::Rc;
 
@@ -8,14 +10,31 @@ use crate::globals::define_globals;
 use crate::lexer::token::Literal;
 use crate::lexer::token::Token;
 use crate::lexer::token::TokenType;
-use crate::lox;
+use crate::lox::{self, LoxError};
 use crate::lox_callable::callable::Callable;
 use crate::lox_callable::lox_function::LoxFunction;
+use crate::scope::Scope;
 use crate::stmt::Stmt;
 use crate::lox_value::{LoxCallable, LoxValue, LoxValueError};
 use crate::lox_callable::lox_class::LoxClass;
 use crate::lox_callable::lox_instance::LoxInstance;
 use crate::symbol::{Symbol, SymbolTable};
+
+macro_rules! generate {
+   ($out:expr, $tab_count:expr, $($line:expr),* $(,)?) => {{
+        let tabs = "\t".repeat($tab_count);
+        $(
+            writeln!($out, "{}{}", tabs, $line)?;
+        )* 
+        Ok(()) as Result<(), LoxError>
+    }};
+}
+
+macro_rules! f {
+    ($($tt:tt)*) => {
+        format!($($tt)*)
+    };
+}
 
 #[derive(Debug)]
 pub enum RuntimeError {
@@ -136,6 +155,55 @@ impl<'a> Interpreter<'a> {
 
     pub fn get_globals(&self) -> Rc<RefCell<Environment>> {
         Rc::clone(&self.globals)
+    }
+
+    pub fn gen_il(&mut self, statements: &[Stmt], out: &mut File) -> Result<(), LoxError> {
+        let mut scope = Scope::new(None);
+        for statement in statements {
+            match statement {
+                Stmt::Expression { expression } =>
+                    self.handle_expression(self.expr_pool.get_expr(*expression), out, &mut scope)?,
+                Stmt::Print { expression } => return Ok(()),
+                Stmt::Var { name, initializer } => 
+                    if name.token_type == TokenType::Identifier && matches!(&name.literal, Literal::Str(var_name)) {
+                        let expr = self.expr_pool.get_expr(initializer.unwrap());
+                    },
+                Stmt::Block { statements } => return Ok(()),
+                Stmt::If { condition, then_branch, else_branch } => return Ok(()),
+                Stmt::While { condition, body } => return Ok(()),
+                Stmt::Function { name, params, body } => return Ok(()),
+                Stmt::Return { keyword, value } => return Ok(()),
+                Stmt::Class { name, superclass, methods } => unreachable!("Classes are not yesupported."),
+                _ => unreachable!("This should've been unreachable")
+            }
+        }
+
+        Ok(())
+    }
+
+    fn handle_expression(&mut self, expr: &Expr, out: &mut File, scope: &mut Scope) -> Result<(), LoxError> {
+        match expr {
+            Expr::Binary { left, operator, right } => Ok(()),
+            Expr::Grouping { expression } => unreachable!("I don't know what this is"),
+            Expr::Literal { value } => match value {
+                Literal::Str(val) =>
+                    if !val.is_ascii() { Err(LoxError::CompilationError("Only ASCII strings are accepted.".to_string())) } 
+                    else { generate!(out, scope.gen(), f!("raw {} \"{}\" ;", val.len(), val), f!("mov {} &ebx", val.len()), "alc", f!("dcr %i &sp {}", val.len()+4))?; Ok(()) },
+                Literal::Num(val) => { generate!(out, scope.gen(), f!("stc %f {}", val))?; Ok(()) },
+                Literal::True => { generate!(out, scope.gen(), "stc %b 1")?; Ok(()) },
+                Literal::False => { generate!(out, scope.gen(), "stc %b 0")?; Ok(()) }
+                _ => unreachable!("Null values are not implemented yet.")
+            },
+            Expr::Unary { operator, right } => Ok(()),
+            Expr::Variable { name } => Ok(()),
+            Expr::Assign { name, value } => Ok(()),
+            Expr::Logical { left, operator, right } => Ok(()),
+            Expr::Call { callee, paren, arguments } => Ok(()),
+            Expr::Get { object, name } => unreachable!("Classes are not yesupported."),
+            Expr::Set { object, name, value } => unreachable!("Classes are not yesupported."),
+            Expr::This { keyword } => unreachable!("Classes are not yesupported."),
+            Expr::Super { keyword, method } => unreachable!("Classes are not yesupported.")
+        }
     }
 
     pub fn interpret(&mut self, statements: &[Stmt]) {

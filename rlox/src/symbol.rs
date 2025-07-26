@@ -49,6 +49,10 @@ impl SymbolTable {
     pub fn resolve(&self, symbol: Symbol) -> &str {
         &self.strings[symbol.0]
     }
+    
+    pub fn get_symbols(&self) -> &Vec<String> {
+        &self.strings
+    }
 }
 
 pub struct SymbolDisplay<'a> {
