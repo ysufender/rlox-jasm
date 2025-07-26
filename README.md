@@ -58,3 +58,10 @@ That's it. Only problem is it only builds for debug, because I want to debug now
 
 > Note:
 > Do a `make clean` if you want to make a clean build. 
+
+### Specifications
+
+Since rlox was meant to be interpreted, so it can't be directly turned into IL. We need
+some specifications. I'll keep updating this part as things come to my mind.
+
+1) All strings are heap objects, in format [u32, char[]] where u32 is lenght.

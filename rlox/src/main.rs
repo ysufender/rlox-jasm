@@ -3,19 +3,30 @@ use std::process::exit;
 
 use rlox_jasm::lox;
 
+macro_rules! log_if_err {
+    ($expr:expr) => {
+        if let Err(err) = $expr {
+            eprintln!("Error: {}", err);
+        }
+    };
+}
+
 fn main() {
-   let args: Vec<String> = args().collect();
-    let args_str: Vec<&str> = args.iter().map(String::as_str).collect();
+    let args: Vec<String> = args().collect();
+    let args_str: Vec<&str> = args[1..].iter().map(String::as_str).collect();
 
     match args_str.as_slice() {
         ["run", files @ ..] if !files.is_empty() => {
+            log_if_err!(lox::run_files(files));
         }
         ["build", files @ ..] if !files.is_empty() => {
+            log_if_err!(lox::build_files(files));
         }
         ["jasm", files @ ..] if !files.is_empty() => {
+            log_if_err!(lox::jasm_files(files));
         }
         ["help", ..] | _ => print_usage()
-    } 
+    }
 }
 
 fn print_usage() {

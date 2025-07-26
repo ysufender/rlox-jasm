@@ -1,4 +1,4 @@
-use crate::lexer::token::{Literal, Token};
+use crate::{expr, lexer::token::{Literal, Token}};
 
 #[derive(Debug, Clone, Hash, Eq, PartialEq, Copy)]
 pub struct ExprIdx(pub usize);

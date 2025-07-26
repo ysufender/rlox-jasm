@@ -1,9 +1,11 @@
 use std::error::Error;
 use std::fmt;
-use std::fs;
+use std::fs::File;
+use std::env;
+use std::process::Command;
 use std::io;
 use std::io::{stdin, stdout, BufRead, BufReader, Write};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use crate::interpreter::{Interpreter, RuntimeError};
 use crate::lexer::scanner;
@@ -17,6 +19,7 @@ pub enum LoxError {
     IOError(io::Error),
     Error(String),
     RuntimeError(String),
+    CompilationError(String)
 }
 
 impl fmt::Display for LoxError {
@@ -25,6 +28,7 @@ impl fmt::Display for LoxError {
             LoxError::IOError(err) => write!(f, "IO Error: {}", err),
             LoxError::Error(msg) => write!(f, "Error: {}", msg),
             LoxError::RuntimeError(msg) => write!(f, "Runtime Error: {}", msg),
+            LoxError::CompilationError(msg) => write!(f, "Error while compiling lox file: {}", msg)
         }
     }
 }
@@ -52,15 +56,86 @@ fn check_errors() -> Result<(), LoxError> {
     Ok(())
 }
 
-pub fn run_file(file_path: &String) -> Result<(), LoxError> {
-    let path = Path::new(file_path);
-    let file_string = fs::read_to_string(path)?;
+pub fn run_files(files: &[&str]) -> Result<(), LoxError> {
+    let byte_files = build_files(files)?;
 
-    run(&file_string)?;
+    // invoke CSR to run byte_files
+    let status = Command::new(env::current_exe()?.parent().unwrap().join("csr"))
+        .arg("-e").arg(byte_files.join(" "))
+        .status()?;
+    
+    if !status.success() {
+        Err(LoxError::CompilationError(format!("Failed to invoke csr [{}]", status.to_string())))
+    }
+    else {
+        Ok(())
+    }
+}
 
-    check_errors()?;
+pub fn build_files(files: &[&str]) -> Result<Vec<String>, LoxError> {
+    let mut res: Vec<String> = Vec::new();
+    let il_files = jasm_files(files)?;
+    for il_file in il_files {
+        let source_path = Path::new(&il_file); 
+        let mut dest_path: PathBuf = source_path.parent().unwrap().to_path_buf();
+        dest_path.push(format!(
+            "{}.jef",
+            source_path.file_stem().unwrap().to_str().unwrap()
+        ));
+        
+        println!("Assembling IL at {}", dest_path.as_path().to_str().unwrap());
+        println!("Invoking {}", env::current_exe()?.parent().unwrap().join("jasm").to_str().unwrap());
+        let status = Command::new(env::current_exe()?.parent().unwrap().join("jasm"))
+            .args(["-s", "-I", &il_file, "-o", dest_path.as_path().to_str().unwrap()])
+            .status()?;
 
-    Ok(())
+        if !status.success() {
+            return Err(LoxError::CompilationError(format!("Failed to invoke jasm [{}]", status.to_string())));
+        }
+
+        res.push(dest_path.into_os_string().into_string().unwrap());
+    }
+
+    Ok(res)
+}
+
+pub fn jasm_files(files: &[&str]) -> Result<Vec<String>, LoxError> {
+    let mut res: Vec<String> = Vec::new();
+
+    for source in files {
+        let source_path = Path::new(source); 
+        let mut dest_path: PathBuf = source_path.parent().unwrap().to_path_buf();
+        dest_path.push(format!(
+            "{}.jasm",
+            source_path.file_stem().unwrap().to_str().unwrap()
+        ));
+
+        println!("Generating IL at {}", dest_path.as_path().to_str().unwrap());
+        let mut output = File::create(&dest_path)?;
+        write!(output,
+"This file has been generated automatically by rlox-jasm.
+rlox, Rust implementation of lox from Crafting Interpreters by Emirhan TALA.
+rlox-jasm, JASM IL and Bytecode generation for rlox by Yusuf Ender Osmanoğlu.
+
+.prep
+    org main
+    sts 1024
+    sth 1024
+.body")?;
+
+        // turn AST into bytecode
+        let src = std::fs::read_to_string(source)?;
+        let result = run(&src, &mut output);
+
+        if result.is_err() {
+            return Err(result.unwrap_err());
+        }
+
+        write!(output, "\n__jasm_IL_end__:\n.end\n\nEnd of generated IL.")?;
+        res.push(dest_path.into_os_string().into_string().unwrap());
+    }
+
+    Ok(res)
 }
 
 pub fn run_prompt() -> Result<(), LoxError> {
@@ -79,7 +154,7 @@ pub fn run_prompt() -> Result<(), LoxError> {
             break; // EOF reached
         }
 
-        run(line.trim())?;
+        //run(line.trim())?;
 
         unsafe {
             HAD_ERROR = false;
@@ -89,7 +164,7 @@ pub fn run_prompt() -> Result<(), LoxError> {
     Ok(())
 }
 
-pub fn run(source: &str) -> Result<(), LoxError> {
+pub fn run(source: &str, out: &mut File) -> Result<(), LoxError> {
     let mut symbol_table = SymbolTable::new();
     let lexer_tokens = {
         let mut lexer = scanner::Scanner::new(source, &mut symbol_table);
@@ -106,6 +181,10 @@ pub fn run(source: &str) -> Result<(), LoxError> {
     let locals = Resolver::new(&expr_pool, &mut symbol_table).resolve_lox(&statements);
 
     check_errors()?;
+    
+    // TODO: The IL generation from AST should be made here.
+    // I might use the existing interpreter to convert it
+    // Evaluable.evaluate() does the work it seems.
 
     let mut interpreter = Interpreter::new(&expr_pool, &mut symbol_table, locals);
     interpreter.interpret(&statements);

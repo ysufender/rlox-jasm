@@ -19,3 +19,7 @@ rlox-bytecode/target/
 
 */target
 *.idea
+
+*.jasm
+*.jo
+*.jef

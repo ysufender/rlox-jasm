@@ -20,3 +20,6 @@ place_libs:
 
 build_rlox:
 	cd rlox && cargo build
+
+test: all
+	cd rlox && target/debug/rlox-jasm run test.rlox
