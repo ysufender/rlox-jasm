@@ -7,7 +7,7 @@ set -o pipefail
 
 ROOT_DIR=$(dirname "$0")
 
-LOX=${LOX:-${ROOT_DIR}/rlox-ast/target/release/rlox-ast}
+LOX=${LOX:-${ROOT_DIR}/rlox/target/release/rlox-jasm}
 
 # Print table header
 printf "| %-20s | %-18s |\n" "File" "Took (s)"

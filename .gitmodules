@@ -1,0 +1,6 @@
+[submodule "external/CSR"]
+	path = external/CSR
+	url = https://github.com/ysufender/CSR.git
+[submodule "external/JASM"]
+	path = external/JASM
+	url = https://github.com/ysufender/JASM.git

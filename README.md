@@ -1,70 +1,61 @@
-# rlox
+# rlox-jasm
 
-Rust implementations of the jlox and clox interpreters from the book [Crafting Interpreters](https://craftinginterpreters.com/).
+JASM IL and JASM Bytecode generating lox compiler written in rust.
 
-> jlox is a tree-walk interpreter written in Java and clox is a bytecode interpreter written in C.
+Base compiler (lexing, parsing, AST) : [Emirhan Tala](https://github.com/Emivvvvv) 
+JASM IL and Bytecode generation      : [Yusuf Ender Osmanoğlu](https://github.com/ysufender)
 
-# rlox-ast roadmap
-Rust implementation of the jlox interpreter from the second chapter of "Crafting Interpreters".
+This repo is forked from [rlox by Emirhan Tala](https://github.com/Emivvvvv/rlox);
+
+> NOTE:
+> Currently the library versions of CSR and JASM are not yet published. And because of that,
+> this repo includes both JASM and CSR repos to build and invoke them from rlox-jasm. Sorry
+> for the inconvenience.
+
+# rlox-jasm roadmap
+IL and Bytecode generation from rlox AST.
 <br>
 
-|        Chapter         | Status |
-|:----------------------:|:------:|
-|        Scanning        |   ✅    |
-|   Representing Code    |   ✅    |
-|  Parsing Expressions   |   ✅    |
-| Evaluating Expressions |   ✅    |
-|  Statements and State  |   ✅    |
-|      Control Flow      |   ✅    |
-|       Functions        |   ✅    |
-| Resolving and Binding  |   ✅    |
-|        Classes         |   ✅    |
-|      Inheritance       |   ✅    |
+|                       Chapter                        | Status |
+|:----------------------------------------------------:|:------:|
+|        IL Representations of Basic Operations        |   ⏳   |
+|                  Variables on Stack                  |   ⏳   |
+|           Statements and jumping around              |   ⏳   |
+|                  Function Signatures                 |   ⏳   |
+|              Stack and Heap Estimations              |   ⏳   |
+|       Non-inheritance Classes (Basic Structs)        |   ⏳   |
+|                Inheritance and VTables               |   ⏳   |
 
-### rlox-ast benchmark
+### rlox-jasm benchmark
 
 ```shell
-sh run_benchmark.sh
+./run_benchmark.sh
 ```
 
 | File                 | Took (s)           |
 |:--------------------:|:------------------:|
-| binary_trees.lox     | 11.44656           |
-| equality.lox         | 5.98698            |
-| fib.lox              | 6.07373            |
-| instantiation.lox    | 4.41940            |
-| invocation.lox       | 2.35333            |
-| method_call.lox      | 1.35501            |
-| properties.lox       | 3.22026            |
-| string_equality.lox  | 4.48729            |
-| trees.lox            | 16.29571           |
-| zoo.lox              | 2.39398            |
+| binary_trees.lox     |        ???         |
+| equality.lox         |        ???         |
+| fib.lox              |        ???         |
+| instantiation.lox    |        ???         |
+| invocation.lox       |        ???         |
+| method_call.lox      |        ???         |
+| properties.lox       |        ???         |
+| string_equality.lox  |        ???         |
+| trees.lox            |        ???         |
+| zoo.lox              |        ???         |
 
-# rlox-bytecode roadmap (The project is on hold for now.)
-Rust implementation of the clox interpreter from the third chapter of "Crafting Interpreters".
-<br>
+### Building
 
-> [!NOTE]
-> The foundation of rclox was inspired by [jeschkies's lox-rs implementation](https://github.com/jeschkies/lox-rs/blob/master/bytecode/).
+- Prerequisites
+    - GCC and G++ unless you want to configure JASM and CSR preset files under `external/`
+    - cargo for, obviously, Rust.
+    - make
+    - a shell
 
-<br>
+Command: `make`
 
-|         Chapter          | Status |
-|:------------------------:|:------:|
-|    Chunks of Bytecode    |   ✅    |
-|    A Virtual Machine     |   ✅    |
-|    Scanning on Demand    |   ✅    |
-|  Compiling Expressions   |   ✅    |
-|     Types of Values      |   ✅    |
-|         Strings          |   ⏳    |
-|       Hash Tables        |   ⏳    |
-|     Global Variables     |   ⏳    |
-|     Local Variables      |   ⏳    |
-|  Jumping Back and Forth  |   ⏳    |
-|   Calls and Functions    |   ⏳    |
-|         Closures         |   ⏳    |
-|    Garbage Collection    |   ⏳    |
-|  Classes and Instances   |   ⏳    |
-| Methods and Initializers |   ⏳    |
-|       Superclasses       |   ⏳    |
-|       Optimization       |   ⏳    |
+That's it. Only problem is it only builds for debug, because I want to debug nowadays.
+
+> Note:
+> Do a `make clean` if you want to make a clean build. 
