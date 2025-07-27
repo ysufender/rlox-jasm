@@ -28,11 +28,12 @@ pub enum Stmt {
     Function {
         name: Token,
         params: Vec<Token>,
+        return_type: Vec<Token>,
         body: Vec<Stmt>,
     },
     Return {
         keyword: Token,
-        value: Option<ExprIdx>,
+        value: Vec<Token>,
     },
     Class {
         name: Token,

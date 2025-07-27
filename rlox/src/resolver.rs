@@ -76,7 +76,7 @@ impl<'a> Resolver<'a> {
                 self.if_stmt(*condition, then_branch, else_branch);
             }
             Stmt::While { condition, body } => self.while_stmt(*condition, body),
-            Stmt::Function { name, params, body } => self.function_stmt(name, params, body),
+            Stmt::Function { name, params, return_type, body } => self.function_stmt(name, params, body),
             Stmt::Return { keyword, value } => {
                 let value_idx = value.as_ref().copied();
                 self.return_stmt(keyword, value_idx);
@@ -338,8 +338,9 @@ impl<'a> Resolver<'a> {
             scope.insert(self.symbol_table.intern("this"), true);
         }
 
+        return unreachable!("Classes are not supported.");
         for method in methods {
-            if let Stmt::Function { name, params, body } = method {
+            if let Stmt::Function { name, params, return_type: _, body } = method {
                 let declaration = if name.lexeme == self.symbol_table.intern("init") {
                     FunctionType::Initializer
                 } else {

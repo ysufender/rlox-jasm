@@ -120,7 +120,7 @@ impl Evaluable for Stmt {
             Stmt::While { condition, body } => {
                 interpreter.evaluate_while_stmt(*condition, body)
             }
-            Stmt::Function { name, params, body } => {
+            Stmt::Function { name, params, return_type, body } => {
                 interpreter.interpret_function_stmt(name, params, body)
             }
             Stmt::Return { keyword, value } => interpreter.interpret_return_stmt(keyword, value),
@@ -162,10 +162,14 @@ impl<'a> Interpreter<'a> {
 
     pub fn gen_il(&mut self, statements: &[Stmt], out: &mut File, cur_scope: Option<&mut Scope>) -> Result<LoxValue, LoxError> {
         let scope: &mut Scope = match cur_scope {
-            None => &mut Scope::new(None, None),
+            None => &mut Scope::new(None, None, None),
             Some(s) => s
         };
         for statement in statements {
+            if scope.gen() <= 2 && !matches!(statement, Stmt::Function{..}) {
+                return Err(LoxError::CompilationError("Top level statements are not allowed.".into()));
+            }
+
             match statement {
                 Stmt::Expression { expression } => {
                     let _ = self.handle_expression(self.expr_pool.get_expr(*expression), out, &scope)?;
@@ -200,32 +204,52 @@ impl<'a> Interpreter<'a> {
                 },
                 Stmt::Var { name, initializer }  => 
                     if name.token_type == TokenType::Identifier {
-                        let Symbol(var_name) = name.lexeme;
                         let expr = self.expr_pool.get_expr(initializer.unwrap());
-                        generate!(out, scope.gen(), format!("#variable {}#", var_name))?;
+                        generate!(out, scope.gen(), format!("#variable {}#", self.symbol_table.resolve(name.lexeme)))?;
                         let val = self.handle_expression(expr, out, &scope)?;
-                        scope.add_var(var_name, val.size(), self.symbol_table, val)?;
+                        scope.add_var(name.lexeme, val.size(), self.symbol_table, val)?;
                     } else { return Err(LoxError::CompilationError("Expected identifier".into())); },
-                Stmt::Block { statements } => { let _ = self.gen_il(&statements, out, Some(scope))?; }
-                Stmt::If { condition, then_branch, else_branch } => return Ok(LoxValue::Void),
-                Stmt::While { condition, body } => return Ok(LoxValue::Void),
-                Stmt::Function { name, params, body } => {
-                    let Symbol(var_name) = name.lexeme;
-                    let var = match self.symbol_table.get_symbols().get(var_name) {
-                        Some(v) => v,
-                        None => unreachable!("Expected a function name.")
-                    };
+                Stmt::Block { statements } => { 
+                    generate!(out, scope.gen(), "#block#")?;
+                    let mut b_scope = Scope::new(Some(&scope), None, None);
+                    let _ = self.gen_il(&statements, out, Some(&mut b_scope))?;
+                    generate!(out, scope.gen()+1, f!("dcr %i &sp {}", b_scope.pos()))?;
+                }
+                Stmt::If { condition: _, then_branch: _, else_branch : _} => return Ok(LoxValue::Void),
+                Stmt::While { condition: _, body : _} => return Ok(LoxValue::Void),
+                Stmt::Function { name, params, return_type, body } => {
+                    let var = self.symbol_table.resolve(name.lexeme);
                     generate!(out, scope.gen(), 
                         "#function definition#",
-                        format!("{}:", var)
+                        f!("#{}({}) -> {}#", var, params.len(), return_type.len()),
+                        f!("{}:", var)
                     )?;
-                    let fn_scope: &mut Scope = &mut Scope::new(None, Some(scope.gen()+1));
+                    let fn_scope: &mut Scope = &mut Scope::new(None, Some(scope.gen()+1), Some(&name.lexeme));
+                    let mut params_returns: Vec<LoxValue> = Vec::new();
                     if params.len() != 0 { 
-                        return Err(LoxError::CompilationError("Only void parameter functions are supported for now.".into()));
+                        //return Err(LoxError::CompilationError("Only void parameter functions are supported for now.".into()));
+                        for Token { token_type: _, lexeme, literal, line: _ } in params {
+                            fn_scope.add_var(
+                                *lexeme, 
+                                Into::<LoxValue>::into(literal).size(),
+                                self.symbol_table,
+                                literal.into()
+                            )?;
+                            params_returns.push(Into::<LoxValue>::into(literal));
+                        }
                     }
+                    if return_type.len() != 0 {
+                        for Token { token_type: _, lexeme:_, literal, line: _ } in return_type {
+                            params_returns.push(Into::<LoxValue>::into(literal));
+                        }
+                    }
+                    let signature = (params.len(), return_type.len(), &params_returns);
+                    fn_scope.add_signature(name.lexeme, &signature, self.symbol_table)?;
                     let _ = self.gen_il(&body, out, Some(fn_scope))?;
                 },
                 Stmt::Return { keyword: _, value } => {
+                    let sign = scope.get_signature(scope.id().unwrap(), self.symbol_table)?;
+                    println!("{}", sign.0);
                     let size: usize = if let Some(exprid) = value {
                         generate!(out, scope.gen(), "#return eval#")?;
                         let expr = self.expr_pool.get_expr(*exprid);    
@@ -240,12 +264,13 @@ impl<'a> Interpreter<'a> {
                     )?;
                     return Ok(LoxValue::Void);
                 },
-                Stmt::Class { name, superclass, methods } => unreachable!("Classes are not yesupported."),
+                Stmt::Class { name: _, superclass: _, methods : _} => unreachable!("Classes are not yesupported."),
                 _ => unreachable!("This should've been unreachable")
             }
         }
 
-        if !scope.has_parent() && scope.gen() > 2 {
+        //if !scope.has_parent() && scope.gen() > 2 {
+        if !scope.is_void() {
             Err(LoxError::CompilationError("Expected return at the end of function body.".into()))
         } else { Ok(LoxValue::Void) }
     }
@@ -279,7 +304,7 @@ impl<'a> Interpreter<'a> {
                 Literal::Num(val) => { generate!(out, scope.gen(), f!("stc %f {}", val))?; Ok(LoxValue::Number(val.into())) },
                 Literal::True => { generate!(out, scope.gen(), "stc %b 1")?; Ok(LoxValue::Boolean(true)) },
                 Literal::False => { generate!(out, scope.gen(), "stc %b 0")?; Ok(LoxValue::Boolean(false)) }
-                _ => unreachable!("Null values are not implemented yet.")
+                _ => unreachable!("Void values are not implemented yet.")
             },
             Expr::Unary { operator, right } => {
                     let expr = self.expr_pool.get_expr(*right);
@@ -298,8 +323,7 @@ impl<'a> Interpreter<'a> {
             },
             Expr::Variable { name } => match name.token_type {
                 TokenType::Identifier => {
-                    let Symbol(var_name) = name.lexeme;
-                    let (pos, size, val) = scope.get_var(var_name, self.symbol_table)?;
+                    let (pos, size, _) = scope.get_var(name.lexeme, self.symbol_table)?;
                     generate!(out, scope.gen(), 
                         "#var ref#",
                         "mov &bp &ebx",
@@ -310,9 +334,9 @@ impl<'a> Interpreter<'a> {
                 },
                 _ => Err(LoxError::CompilationError("Expected identifier".into()))
             },
-            Expr::Assign { name: Token { token_type: TokenType::Identifier, lexeme:Symbol(var_name), literal:_, line:_ }, value } => {
+            Expr::Assign { name: Token { token_type: TokenType::Identifier, lexeme, literal:_, line:_ }, value } => {
                 let expr = self.expr_pool.get_expr(*value); 
-                let (pos, size, var) = scope.get_var(*var_name, self.symbol_table)?;
+                let (pos, _, var) = scope.get_var(*lexeme, self.symbol_table)?;
                 generate!(out, scope.gen(), f!("#assignment {}#", pos))?;
                 let val = self.handle_expression(expr, out, scope)?;
                 if var.r#type() != val.r#type() {
@@ -353,12 +377,14 @@ impl<'a> Interpreter<'a> {
                     }
                 }
             },
-            Expr::Logical { left, operator, right } => Ok(LoxValue::Void),
-            Expr::Call { callee, paren, arguments } => Ok(LoxValue::Void),
-            Expr::Get { object, name } => todo!("Classes are not yet supported."),
-            Expr::Set { object, name, value } => todo!("Classes are not yet supported."),
-            Expr::This { keyword } => todo!("Classes are not yet supported."),
-            Expr::Super { keyword, method } => todo!("Classes are not yet supported."),
+            Expr::Logical { left: _, operator: _, right : _} => Ok(LoxValue::Void),
+            Expr::Call { callee: _, paren: _, arguments : _} => {
+                Ok(LoxValue::Void)
+            },
+            Expr::Get { object: _, name : _} => todo!("Classes are not yet supported."),
+            Expr::Set { object: _, name: _, value : _} => todo!("Classes are not yet supported."),
+            Expr::This { keyword : _} => todo!("Classes are not yet supported."),
+            Expr::Super { keyword: _, method : _} => todo!("Classes are not yet supported."),
             _ => todo!()
         }
     }
@@ -708,7 +734,7 @@ impl<'a> Interpreter<'a> {
         let mut methods_map: FxHashMap<Symbol, LoxCallable> = FxHashMap::default();
 
         for method in methods {
-            if let Stmt::Function { name: method_name, params, body } = method {
+            if let Stmt::Function { name: method_name, params, return_type: _, body } = method {
                 let is_initializer = method_name.lexeme == self.symbol_table.intern("init");
                 let function = LoxFunction::new(
                     method_name.clone(),

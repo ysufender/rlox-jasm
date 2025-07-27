@@ -50,10 +50,16 @@ impl<'a> Scanner<'a> {
             '}' => self.add_token(TokenType::RightBrace, Literal::Void),
             ',' => self.add_token(TokenType::Comma, Literal::Void),
             '.' => self.add_token(TokenType::Dot, Literal::Void),
-            '-' => self.add_token(TokenType::Minus, Literal::Void),
+            '-' => {
+                let token_type = if self.match_operators('>') {
+                    TokenType::Arrow
+                } else { TokenType::Minus };
+                self.add_token(token_type, Literal::Void)
+            },
             '+' => self.add_token(TokenType::Plus, Literal::Void),
             ';' => self.add_token(TokenType::Semicolon, Literal::Void),
             '*' => self.add_token(TokenType::Star, Literal::Void),
+            ':' => self.add_token(TokenType::Colon, Literal::Void),
             '!' => {
                 let token_type = if self.match_operators('=') {
                     TokenType::BangEqual
@@ -235,22 +241,25 @@ impl<'a> Scanner<'a> {
 
         let text = &self.source[self.start..self.current];
         let token_type: TokenType = match text {
-            "and" => TokenType::And,
+            "&&" => TokenType::And,
             "class" => TokenType::Class,
             "else" => TokenType::Else,
             "false" => TokenType::False,
             "for" => TokenType::For,
-            "fun" => TokenType::Fun,
+            "fn" => TokenType::Fun,
             "if" => TokenType::If,
-            "nil" => TokenType::Nil,
-            "or" => TokenType::Or,
+            "void" => TokenType::Void,
+            "||" => TokenType::Or,
             "print" => TokenType::Print,
             "return" => TokenType::Return,
             "super" => TokenType::Super,
             "this" => TokenType::This,
             "true" => TokenType::True,
-            "var" => TokenType::Var,
+            "let" => TokenType::Var,
             "while" => TokenType::While,
+            "num" => TokenType::Number,
+            "bool" => TokenType::Bool,
+            "str" => TokenType::String,
             _ => TokenType::Identifier,
         };
 

@@ -1,4 +1,10 @@
-fun main() {
-    print("World");
+fn test() -> (str, num) {
     return;
+}
+
+fn main() -> void {
+    {
+        let a: str = "Hello";        
+    }
+    let b: str = "World";
 }

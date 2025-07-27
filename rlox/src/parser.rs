@@ -1,8 +1,8 @@
 use crate::expr::{Expr, ExprIdx, ExprPool};
-use crate::lexer::token::{ErrorToken, Literal, Token, TokenType};
+use crate::lexer::token::{ErrorToken, Hf64, Literal, Token, TokenType};
 use crate::lox;
 use crate::stmt::Stmt;
-use crate::symbol::SymbolTable;
+use crate::symbol::{Symbol, SymbolTable};
 
 #[derive(Debug, Clone)]
 pub struct ParseError;
@@ -102,7 +102,13 @@ impl<'a> Parser<'a> {
                     self.error(self.peek(), "Can't have more than 255 parameters.");
                 }
 
-                parameters.push(self.consume(TokenType::Identifier, "Expect parameter name.")?);
+                let mut identifier = self.consume(TokenType::Identifier, "Expected parameter name.")?;
+                self.consume(TokenType::Colon, "Expected colon after identifier.")?;
+                let token = self.advance();
+                if [TokenType::String, TokenType::Number, TokenType::Bool].iter().any(|x| *x == token.token_type) {
+                    identifier.literal = token.token_type.into();
+                } else { return Err(ParseError); }
+                        parameters.push(identifier);
 
                 if !self.match_types(&[TokenType::Comma]) {
                     break;
@@ -111,10 +117,43 @@ impl<'a> Parser<'a> {
         }
 
         self.consume(TokenType::RightParen, "Expect ')' after parameters.")?;
+        self.consume(TokenType::Arrow, "Expected '->' to denote return type.")?;
 
+        let mut returns = Vec::new();
+        let arrow_or_paren: Token = self.advance();
+        match arrow_or_paren.token_type {
+            TokenType::Number | TokenType::String | TokenType::Bool => 
+                returns.push(Token{ token_type: arrow_or_paren.token_type.clone(), lexeme: Symbol(0), literal: arrow_or_paren.clone().into(), line: arrow_or_paren.line }),
+            TokenType::Void => {},
+            TokenType::LeftParen => {
+                if self.check(&TokenType::RightParen) {
+                    return Err(ParseError)
+                } else {
+                    loop {
+                        if returns.len() >= 255 {
+                            self.error(self.peek(), "Can't have more than 255 parameters.");
+                        }
+
+                        let mut token = self.advance();
+                        if [TokenType::String, TokenType::Number, TokenType::Bool].iter().any(|x| *x == token.token_type) {
+                            token.literal = token.clone().into(); 
+                        } else { return Err(ParseError); }
+                                returns.push(token);
+
+                        if !self.match_types(&[TokenType::Comma]) {
+                            break;
+                        }
+                    }
+                }
+            },
+            _ => unreachable!()
+        }
+        if returns.len() > 1 {
+            self.consume(TokenType::RightParen, "Expected ')' after return typelist.")?;
+        }
         self.consume(
             TokenType::LeftBrace,
-            &format!("Expect '{{' after {} body.", kind),
+            &format!("Expect '{' after {} body.", kind),
         )?;
 
         let body = self.block()?;
@@ -122,12 +161,25 @@ impl<'a> Parser<'a> {
         Ok(Stmt::Function {
             name,
             params: parameters,
+            return_type: returns,
             body,
         })
     }
 
     fn var_declaration(&mut self) -> Result<Stmt, ParseError> {
         let name = self.consume(TokenType::Identifier, "Expect variable name.")?;
+
+        let mut t: Literal;
+        self.consume(TokenType::Colon, "Expected ':' after identifier.")?;
+        let token = self.advance();
+        if [TokenType::String, TokenType::Number, TokenType::Bool].iter().any(|x| *x == token.token_type) {
+            t = match token.token_type {
+                TokenType::String => Literal::Str("".into()),
+                TokenType::Number => Literal::Num(0f64.into()),
+                TokenType::Bool => Literal::True,
+                _ => unreachable!()
+            }
+        } else { return Err(ParseError); }
 
         let mut initializer = None;
         if self.match_types(&[TokenType::Equal]) {
@@ -139,7 +191,13 @@ impl<'a> Parser<'a> {
             "Expect ';' after variable declaration",
         )?;
 
-        Ok(Stmt::Var { name, initializer })
+        Ok(Stmt::Var { 
+            name: Token { 
+                literal: t,
+                ..name
+            }, 
+            initializer 
+        })
     }
 
     fn statement(&mut self) -> Result<Stmt, ParseError> {
@@ -180,14 +238,46 @@ impl<'a> Parser<'a> {
 
     fn return_stmt(&mut self) -> Result<Stmt, ParseError> {
         let keyword = self.previous();
-        let mut value = None;
+        let mut returns = Vec::new();
 
         if !self.check(&TokenType::Semicolon) {
-            value = Some(self.expression()?);
+            let arrow_or_paren: Token = self.advance();
+            match arrow_or_paren.token_type {
+                TokenType::Number | TokenType::String | TokenType::Bool => 
+                    returns.push(Token{ token_type: arrow_or_paren.token_type.clone(), lexeme: Symbol(0), literal: arrow_or_paren.clone().into(), line: arrow_or_paren.line }),
+                TokenType::Void => {},
+                TokenType::LeftParen => {
+                    if self.check(&TokenType::RightParen) {
+                        return Err(ParseError)
+                    } else {
+                        loop {
+                            if returns.len() >= 255 {
+                                self.error(self.peek(), "Can't have more than 255 parameters.");
+                            }
+
+                            let mut token = self.advance();
+                            if [TokenType::String, TokenType::Number, TokenType::Bool].iter().any(|x| *x == token.token_type) {
+                                token.literal = token.clone().into(); 
+                            } else { return Err(ParseError); }
+                                    returns.push(token);
+
+                            if !self.match_types(&[TokenType::Comma]) {
+                                break;
+                            }
+                        }
+                    }
+                },
+                _ => unreachable!()
+            }
+            if returns.len() > 1 {
+                self.consume(TokenType::RightParen, "Expected ')' after return typelist.")?;
+            }
+        } else {
+
         }
         self.consume(TokenType::Semicolon, "Expect ';' after return value.")?;
 
-        Ok(Stmt::Return { keyword, value })
+        Ok(Stmt::Return { keyword, value: returns })
     }
 
     fn while_stmt(&mut self) -> Result<Stmt, ParseError> {
@@ -517,7 +607,7 @@ impl<'a> Parser<'a> {
             return Ok(idx);
         }
 
-        if self.match_types(&[TokenType::Nil]) {
+        if self.match_types(&[TokenType::Void]) {
             let literal_expr = Expr::Literal {
                 value: Literal::Void,
             };

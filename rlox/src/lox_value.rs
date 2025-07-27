@@ -4,7 +4,7 @@ use std::rc::Rc;
 
 use crate::globals::{ClockFunction, InputFunction};
 use crate::interpreter::{Interpreter, RuntimeError};
-use crate::lexer::token::{Literal, TokenType};
+use crate::lexer::token::{Hf64, Literal, Token, TokenType};
 use crate::lox_callable::lox_class::LoxClass;
 use crate::lox_callable::lox_function::LoxFunction;
 use crate::lox_callable::lox_instance::LoxInstance;

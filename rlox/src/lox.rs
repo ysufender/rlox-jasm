@@ -13,6 +13,7 @@ use crate::lexer::scanner;
 use crate::lexer::token::{ErrorToken, TokenType};
 use crate::parser::Parser;
 use crate::resolver::Resolver;
+use crate::scope::Scope;
 use crate::symbol::SymbolTable;
 
 #[derive(Debug)]
@@ -210,7 +211,7 @@ pub fn run(source: &str, out: &mut File) -> Result<(), LoxError> {
     let parser = Parser::new(&symbol_table, lexer_tokens);
     let (statements, expr_pool) = parser
         .parse()
-        .map_err(|_| LoxError::Error("Error during parsing".to_string()))?;
+        .map_err(|_| LoxError::Error("Error during parsing".into()))?;
     check_errors()?;
 
     let locals = Resolver::new(&expr_pool, &mut symbol_table).resolve_lox(&statements);

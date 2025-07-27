@@ -17,6 +17,7 @@ pub enum TokenType {
     Minus,
     Plus,
     Semicolon,
+    Colon,
     Slash,
     Star,
 
@@ -29,11 +30,13 @@ pub enum TokenType {
     GreaterEqual,
     Less,
     LessEqual,
+    Arrow,
 
-    // Literals.
+    // Literals & Types
     Identifier,
     String,
     Number,
+    Bool,
 
     // Keywords.
     And,
@@ -43,7 +46,7 @@ pub enum TokenType {
     Fun,
     For,
     If,
-    Nil,
+    Void,
     Or,
     Print,
     Return,
@@ -53,6 +56,17 @@ pub enum TokenType {
     Var,
     While,
     Eof,
+}
+
+impl From<TokenType> for Literal {
+    fn from(value: TokenType) -> Self {
+        match value {
+            TokenType::String => Self::Str("".into()),
+            TokenType::Number => Self::Num(0f64.into()),
+            TokenType::Bool => Self::False,
+            _ => unreachable!()
+        }
+    }
 }
 
 #[derive(Debug, Eq, Hash, PartialEq, Copy, Clone)]
@@ -116,6 +130,17 @@ pub struct Token {
     pub lexeme: Symbol,
     pub literal: Literal,
     pub line: usize,
+}
+
+impl From<Token> for Literal {
+    fn from(value: Token) -> Self {
+        match value.token_type {
+            TokenType::String => Self::Str("".into()),
+            TokenType::Number => Self::Num(0f64.into()),
+            TokenType::Bool => Self::False,
+            _ => unreachable!()
+        }
+    }
 }
 
 impl Token {

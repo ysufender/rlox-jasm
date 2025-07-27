@@ -1,4 +1,4 @@
-use std::env::args;
+use std::env::{self, args};
 use std::process::exit;
 
 use rlox_jasm::lox;
@@ -14,6 +14,7 @@ macro_rules! log_if_err {
 fn main() {
     let args: Vec<String> = args().collect();
     let args_str: Vec<&str> = args[1..].iter().map(String::as_str).collect();
+    env::set_var("RUST_BACKTRACE", "1");
 
     match args_str.as_slice() {
         ["run", "interpret", files @ ..] => {
