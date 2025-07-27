@@ -2,3 +2,5 @@ fun main() {
     print("World");
     return;
 }
+
+main();

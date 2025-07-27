@@ -23,3 +23,6 @@ build_rlox:
 
 test: all
 	cd rlox && target/debug/rlox-jasm run test.rlox
+
+interpret: build_rlox
+	cd rlox && target/debug/rlox-jasm run interpret test2.rlox

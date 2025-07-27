@@ -16,6 +16,9 @@ fn main() {
     let args_str: Vec<&str> = args[1..].iter().map(String::as_str).collect();
 
     match args_str.as_slice() {
+        ["run", "interpret", files @ ..] => {
+            log_if_err!(lox::interpret_files(files));
+        },
         ["run", files @ ..] if !files.is_empty() => {
             log_if_err!(lox::run_files(files));
         }

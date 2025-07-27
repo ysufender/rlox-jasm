@@ -54,10 +54,23 @@ pub enum LoxValue {
 impl LoxValue {
     pub fn size(&self) -> usize {
         match self {
-            LoxValue::String(value) => value.len()+4,
+            LoxValue::String(_) => 4,
             LoxValue::Number(_) => 4,
             LoxValue::Boolean(_) => 1,
-            _ => 0
+            LoxValue::Variable(_, size) => *size,
+            LoxValue::Void => 0,
+            LoxValue::Callable(_) => 0
+        }
+    }
+
+    pub fn r#type(&self) -> String {
+        match self {
+            LoxValue::String(_) => "str".into(),
+            LoxValue::Number(_) => "num".into(),
+            LoxValue::Boolean(_) => "bool".into(),
+            LoxValue::Variable(_, _) => "ref".into(),
+            LoxValue::Void => "void".into(),
+            LoxValue::Callable(n) => n.get_name()
         }
     }
 }

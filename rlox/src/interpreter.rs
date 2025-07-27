@@ -1,5 +1,4 @@
 use std::cell::RefCell;
-use std::error::Error;
 use std::fs::File;
 use std::io::Write;
 use rustc_hash::FxHashMap;
@@ -25,9 +24,12 @@ macro_rules! generate {
    ($out:expr, $tab_count:expr, $($line:expr),* $(,)?) => {{
         let tabs = "\t".repeat($tab_count);
         $(
-            write!($out, "\n{}{}", tabs, $line)?;
+            if (!$line.is_empty()) {
+                write!($out, "\n{}{}", tabs, $line)?;
+            }
         )* 
-        Ok(()) as Result<(), LoxError>
+        write!($out, "\n")?;
+        Ok(LoxValue::Void) as Result<LoxValue, LoxError>
     }};
 }
 
@@ -158,8 +160,11 @@ impl<'a> Interpreter<'a> {
         Rc::clone(&self.globals)
     }
 
-    pub fn gen_il(&mut self, statements: &[Stmt], out: &mut File, parent: Option<&Scope>) -> Result<LoxValue, LoxError> {
-        let mut scope = Scope::new(parent);
+    pub fn gen_il(&mut self, statements: &[Stmt], out: &mut File, cur_scope: Option<&mut Scope>) -> Result<LoxValue, LoxError> {
+        let scope: &mut Scope = match cur_scope {
+            None => &mut Scope::new(None, None),
+            Some(s) => s
+        };
         for statement in statements {
             match statement {
                 Stmt::Expression { expression } => {
@@ -171,6 +176,7 @@ impl<'a> Interpreter<'a> {
                     match val {
                         LoxValue::String(_) | LoxValue::Variable(_, _) => {
                             generate!(out, scope.gen(), 
+                                "#Print#",
                                 "mov &ebx",
                                 "mov &ebx &eax",
                                 "rda %i",
@@ -184,40 +190,83 @@ impl<'a> Interpreter<'a> {
                                 "or &dl &flg",
                                 "mov &ecx &bl",
                                 "cal 0x0",
-                                "dcr %b &flg 1"
+                                "dcr %b &flg 1",
+                                "sub %i &sp &ecx",
+                                "mov &ecx &sp"
                             )?;
                         }
                         _ => return Err(LoxError::CompilationError("Expected string".into()))
                     }
                 },
-                Stmt::Var { name, initializer } if name.token_type == TokenType::Identifier => 
-                    if let Literal::Str(var_name) = &name.literal  {
+                Stmt::Var { name, initializer }  => 
+                    if name.token_type == TokenType::Identifier {
+                        let Symbol(var_name) = name.lexeme;
                         let expr = self.expr_pool.get_expr(initializer.unwrap());
+                        generate!(out, scope.gen(), format!("#variable {}#", var_name))?;
                         let val = self.handle_expression(expr, out, &scope)?;
-                        scope.add_var(var_name, val.size())?;
-                    } else { return Err(LoxError::CompilationError("Expected identifier".to_string())); },
-                Stmt::Block { statements } => { let _ = self.gen_il(&statements, out, Some(&scope))?; }
+                        scope.add_var(var_name, val.size(), self.symbol_table, val)?;
+                    } else { return Err(LoxError::CompilationError("Expected identifier".into())); },
+                Stmt::Block { statements } => { let _ = self.gen_il(&statements, out, Some(scope))?; }
                 Stmt::If { condition, then_branch, else_branch } => return Ok(LoxValue::Void),
                 Stmt::While { condition, body } => return Ok(LoxValue::Void),
-                Stmt::Function { name, params, body } => return Ok(LoxValue::Void),
-                Stmt::Return { keyword, value } => return Ok(LoxValue::Void),
+                Stmt::Function { name, params, body } => {
+                    let Symbol(var_name) = name.lexeme;
+                    let var = match self.symbol_table.get_symbols().get(var_name) {
+                        Some(v) => v,
+                        None => unreachable!("Expected a function name.")
+                    };
+                    generate!(out, scope.gen(), 
+                        "#function definition#",
+                        format!("{}:", var)
+                    )?;
+                    let fn_scope: &mut Scope = &mut Scope::new(None, Some(scope.gen()+1));
+                    if params.len() != 0 { 
+                        return Err(LoxError::CompilationError("Only void parameter functions are supported for now.".into()));
+                    }
+                    let _ = self.gen_il(&body, out, Some(fn_scope))?;
+                },
+                Stmt::Return { keyword: _, value } => {
+                    let size: usize = if let Some(exprid) = value {
+                        generate!(out, scope.gen(), "#return eval#")?;
+                        let expr = self.expr_pool.get_expr(*exprid);    
+                        let val = self.handle_expression(expr, out, scope);
+                        if let Err(e) = val {
+                            return Err(e)
+                        } else { val.unwrap().size() }
+                    } else { 0 };
+                    generate!(out, scope.gen(),
+                        f!("mov {} &bl", size),
+                        "ret"
+                    )?;
+                    return Ok(LoxValue::Void);
+                },
                 Stmt::Class { name, superclass, methods } => unreachable!("Classes are not yesupported."),
                 _ => unreachable!("This should've been unreachable")
             }
         }
 
-        generate!(out, scope.gen(), "jmp __jasm_IL_end__")?;
-        Ok(LoxValue::Void)
+        if !scope.has_parent() && scope.gen() > 2 {
+            Err(LoxError::CompilationError("Expected return at the end of function body.".into()))
+        } else { Ok(LoxValue::Void) }
     }
 
     fn handle_expression(&mut self, expr: &Expr, out: &mut File, scope: &Scope) -> Result<LoxValue, LoxError> {
         match expr {
-            Expr::Binary { left, operator, right } => Ok(LoxValue::Void),
+            Expr::Binary { left, operator, right } => {
+                let lhs = self.handle_expression(self.expr_pool.get_expr(*left), out, scope)?;
+                let rhs = self.handle_expression(self.expr_pool.get_expr(*right), out, scope)?;
+                if lhs.r#type() != rhs.r#type() { return Err(LoxError::CompilationError("Operand type missmatch.".into())) }
+                match operator.token_type {
+                    TokenType::Plus => {generate!(out, scope.gen(), "add %f")?; Ok(lhs)},
+                    _ => todo!("Not Yet")
+                }
+            },
             Expr::Grouping { expression } => self.handle_expression(self.expr_pool.get_expr(*expression), out, &scope),
             Expr::Literal { value } => match value {
                 Literal::Str(val) =>
                     if !val.is_ascii() { Err(LoxError::CompilationError("Only ASCII strings are accepted.".to_string())) } 
                     else { generate!(out, scope.gen(),
+                                "#str literal#",
                                 f!("raw {} \"{}\" ;", val.len(), val),
                                 f!("mov {} &ecx", val.len()+4), 
                                 "alc", 
@@ -232,36 +281,85 @@ impl<'a> Interpreter<'a> {
                 Literal::False => { generate!(out, scope.gen(), "stc %b 0")?; Ok(LoxValue::Boolean(false)) }
                 _ => unreachable!("Null values are not implemented yet.")
             },
-            Expr::Unary { operator, right } => Ok(LoxValue::Void),
-            Expr::Variable { name } => match &name.literal {
-                Literal::Str(var_name) => {
-                    let (pos, size) = scope.get_var(var_name)?;
+            Expr::Unary { operator, right } => {
+                    let expr = self.expr_pool.get_expr(*right);
+                    if operator.token_type == TokenType::Minus {
+                        generate!(out, scope.gen(), "#unary min#", "stc %f 0")?;
+                        let val = self.handle_expression(expr, out, scope)?;
+                        if val.r#type() != "num" { return Err(LoxError::CompilationError("Invalid Type".into())); }
+                        generate!(out, scope.gen(), "sub %f")?;
+                        Ok(val)
+                    } else {
+                        todo!("Not yet");
+                        let val = self.handle_expression(expr, out, scope)?;
+                        if val.r#type() != "bool" { return Err(LoxError::CompilationError("Invalid Type".into())); }
+                        generate!(out, scope.gen(), "sub %f")?;
+                    }
+            },
+            Expr::Variable { name } => match name.token_type {
+                TokenType::Identifier => {
+                    let Symbol(var_name) = name.lexeme;
+                    let (pos, size, val) = scope.get_var(var_name, self.symbol_table)?;
                     generate!(out, scope.gen(), 
-                        "rda &bp",
-                        f!("inc %i {}", pos),
-                        "mov &eax",
-                        "dcr %i &sp 4",
-                        "mov 4 &ecx",
-                        "mov &sp &ebx",
-                        "mcp %s %s"
+                        "#var ref#",
+                        "mov &bp &ebx",
+                        if pos > 0 { f!("inc %i &ebx {}", pos) } else { "".into() },
+                        if size == 1 { "rda %b" } else { "rda %i" },
                     )?;
                     Ok(LoxValue::Variable(pos, size))
                 },
                 _ => Err(LoxError::CompilationError("Expected identifier".into()))
             },
-            Expr::Assign { name: Token { token_type: TokenType::Identifier, lexeme:_, literal:Literal::Str(var), line:_ }, value } => {
+            Expr::Assign { name: Token { token_type: TokenType::Identifier, lexeme:Symbol(var_name), literal:_, line:_ }, value } => {
                 let expr = self.expr_pool.get_expr(*value); 
+                let (pos, size, var) = scope.get_var(*var_name, self.symbol_table)?;
+                generate!(out, scope.gen(), f!("#assignment {}#", pos))?;
                 let val = self.handle_expression(expr, out, scope)?;
-                let (pos, size) = scope.get_var(var)?;
-                Ok(LoxValue::Void)
+                if var.r#type() != val.r#type() {
+                    return Err(LoxError::CompilationError("Type missmatch.".into()));
+                }
+                match val {
+                    LoxValue::String(_) => {
+                        generate!(out, scope.gen(),
+                            "#string assignment#",
+                            "mov &bp &ebx",
+                            if pos > 0 { f!("inc %i &ebx {}", pos) } else { "".into() },
+                            "rda %i",
+                            "mov &ebx",
+                            "pop %i",
+                            "rda %i",
+                            "mov &ecx",
+                            "pop %i",
+                            "inc %i &ecx 4",
+                            "del",
+                            "mov &bp &ebx",
+                            if pos > 0 { f!("inc %i &ebx {}", pos) } else { "".into() },
+                            "ldc %i",
+                            "pop %i"
+                        )?;
+                        Ok(LoxValue::Void)
+                    },
+                    LoxValue::Void => Err(LoxError::CompilationError("Void assignation is not permitted.".into())),
+                    LoxValue::Callable(_) => Err(LoxError::CompilationError("Can't assign functions to things.".into())),
+                    _ => {
+                        generate!(out, scope.gen(), 
+                            "#assignment#",
+                            "mov &bp &ebx",
+                            if pos > 0 { f!("inc %i &ebx {}", pos) } else { "".into() },
+                            if val.size() == 1 { "ldc %b" } else { "ldc %i" },
+                            if val.size() == 1 { "pop %b" } else { "pop %i" },
+                        )?;
+                        Ok(LoxValue::Void)
+                    }
+                }
             },
             Expr::Logical { left, operator, right } => Ok(LoxValue::Void),
             Expr::Call { callee, paren, arguments } => Ok(LoxValue::Void),
-            Expr::Get { object, name } => unreachable!("Classes are not yesupported."),
-            Expr::Set { object, name, value } => unreachable!("Classes are not yesupported."),
-            Expr::This { keyword } => unreachable!("Classes are not yesupported."),
-            Expr::Super { keyword, method } => unreachable!("Classes are not yesupported."),
-            _ => unreachable!("Unreachable")
+            Expr::Get { object, name } => todo!("Classes are not yet supported."),
+            Expr::Set { object, name, value } => todo!("Classes are not yet supported."),
+            Expr::This { keyword } => todo!("Classes are not yet supported."),
+            Expr::Super { keyword, method } => todo!("Classes are not yet supported."),
+            _ => todo!()
         }
     }
 
@@ -320,7 +418,7 @@ impl<'a> Interpreter<'a> {
                         .math_if_num(right, &TokenType::Plus)
                         .map_err(|e| RuntimeError::IncorrectOperand(operator.clone(), e))
                 }
-                _ => Ok(LoxValue::String(format!("{left}{right}"))),
+                _ => Ok(LoxValue::String(f!("{left}{right}"))),
             },
             TokenType::Greater
             | TokenType::GreaterEqual
@@ -431,7 +529,7 @@ impl<'a> Interpreter<'a> {
                 if arguments.len() != callable.arity(self.symbol_table) {
                     return Err(RuntimeError::InterpreterPanic(
                         paren.clone(),
-                        format!(
+                        f!(
                             "Expected {} arguments but got {}.",
                             callable.arity(self.symbol_table),
                             arguments.len()

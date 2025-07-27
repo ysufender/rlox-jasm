@@ -57,12 +57,24 @@ fn check_errors() -> Result<(), LoxError> {
     Ok(())
 }
 
+pub fn interpret_files(files: &[&str]) -> Result<(), LoxError> {
+    for file in files {
+        let src = std::fs::read_to_string(file)?;
+        let result = run_interpret(&src);
+
+        if result.is_err() {
+            return Err(result.unwrap_err());
+        }
+    }
+    Ok(())
+}
+
 pub fn run_files(files: &[&str]) -> Result<(), LoxError> {
     let byte_files = build_files(files)?;
 
     // invoke CSR to run byte_files
     let status = Command::new(env::current_exe()?.parent().unwrap().join("csr"))
-        .arg("-e").arg(byte_files.join(" "))
+        .arg("-e").args(byte_files)
         .status()?;
     
     if !status.success() {
@@ -166,6 +178,27 @@ pub fn run_prompt() -> Result<(), LoxError> {
     Ok(())
 }
 
+pub fn run_interpret(source: &str) -> Result<(), LoxError> {
+    let mut symbol_table = SymbolTable::new();
+    let lexer_tokens = {
+        let mut lexer = scanner::Scanner::new(source, &mut symbol_table);
+        lexer.scan_tokens();
+
+        lexer.tokens
+    };
+    let parser = Parser::new(&symbol_table, lexer_tokens);
+    let (statements, expr_pool) = parser
+        .parse()
+        .map_err(|_| LoxError::Error("Error during parsing".to_string()))?;
+    check_errors()?;
+
+    let locals = Resolver::new(&expr_pool, &mut symbol_table).resolve_lox(&statements);
+
+    let mut interpreter = Interpreter::new(&expr_pool, &mut symbol_table, locals);
+    interpreter.interpret(&statements);
+    Ok(())
+}
+
 pub fn run(source: &str, out: &mut File) -> Result<(), LoxError> {
     let mut symbol_table = SymbolTable::new(); // For the lexer.
     let lexer_tokens = {
@@ -182,14 +215,8 @@ pub fn run(source: &str, out: &mut File) -> Result<(), LoxError> {
 
     let locals = Resolver::new(&expr_pool, &mut symbol_table).resolve_lox(&statements);
 
-    // TODO: The IL generation from AST should be made here.
-    // I might use the existing interpreter to convert it
-    // Evaluable.evaluate() does the work it seems.
-
     let mut interpreter = Interpreter::new(&expr_pool, &mut symbol_table, locals);
-    interpreter.interpret(&statements);
-    interpreter.gen_il(&statements, out, None);
-
+    interpreter.gen_il(&statements, out, None)?;
     Ok(())
 }
 
