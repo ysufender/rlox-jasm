@@ -43,11 +43,23 @@ pub enum LoxCallable {
 
 #[derive(Clone, Debug)]
 pub enum LoxValue {
-    Nil,
+    Void,
     Boolean(bool),
     Number(f64),
     String(String),
     Callable(LoxCallable),
+    Variable(usize, usize)
+}
+
+impl LoxValue {
+    pub fn size(&self) -> usize {
+        match self {
+            LoxValue::String(value) => value.len()+4,
+            LoxValue::Number(_) => 4,
+            LoxValue::Boolean(_) => 1,
+            _ => 0
+        }
+    }
 }
 
 impl LoxValue {
@@ -70,7 +82,7 @@ impl LoxValue {
     }
 
     pub(crate) fn is_truthy(&self) -> Self {
-        if self == &LoxValue::Nil {
+        if self == &LoxValue::Void {
             return LoxValue::Boolean(false)
         }
         if let &LoxValue::Boolean(bool) = self {
@@ -139,7 +151,7 @@ impl LoxValue {
             }
             (LoxValue::String(left_str), LoxValue::String(right_str)) => left_str == right_str,
             (LoxValue::Number(left_num), LoxValue::Number(right_num)) => left_num == right_num,
-            (LoxValue::Nil, LoxValue::Nil) => true,
+            (LoxValue::Void, LoxValue::Void) => true,
             _ => false,
         };
 
@@ -152,7 +164,7 @@ impl From<&Literal> for LoxValue {
         match literal {
             Literal::Str(str) => Self::String(str.clone()),
             Literal::Num(num) => Self::Number(f64::from(num)),
-            Literal::Nil => Self::Nil,
+            Literal::Void => Self::Void,
             Literal::True => Self::Boolean(true),
             Literal::False => Self::Boolean(false),
         }
@@ -217,7 +229,7 @@ impl fmt::Display for LoxValue {
                 str_num
             }
             LoxValue::Boolean(bool) => bool.to_string(),
-            LoxValue::Nil => "nil".to_string(),
+            LoxValue::Void => "nil".to_string(),
             LoxValue::Callable(callable) => {
                 let name = match callable {
                     LoxCallable::Function(function) => {
@@ -248,6 +260,7 @@ impl fmt::Display for LoxValue {
                 };
                 name // Now `name` is a `String`, so it owns the data
             },
+            _ => "".to_string()
         };
         write!(f, "{}", text)
     }
@@ -256,7 +269,7 @@ impl fmt::Display for LoxValue {
 impl PartialEq for LoxValue {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
-            (LoxValue::Nil, LoxValue::Nil) => true,
+            (LoxValue::Void, LoxValue::Void) => true,
             (LoxValue::Boolean(a), LoxValue::Boolean(b)) => a == b,
             (LoxValue::Number(a), LoxValue::Number(b)) => a == b,
             (LoxValue::String(a), LoxValue::String(b)) => a == b,

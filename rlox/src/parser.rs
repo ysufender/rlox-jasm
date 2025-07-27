@@ -519,7 +519,7 @@ impl<'a> Parser<'a> {
 
         if self.match_types(&[TokenType::Nil]) {
             let literal_expr = Expr::Literal {
-                value: Literal::Nil,
+                value: Literal::Void,
             };
             let idx = self.expr_pool.add_expr(literal_expr);
             return Ok(idx);

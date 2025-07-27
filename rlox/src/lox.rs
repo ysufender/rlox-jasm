@@ -116,10 +116,14 @@ rlox, Rust implementation of lox from Crafting Interpreters by Emirhan TALA.
 rlox-jasm, JASM IL and Bytecode generation for rlox by Yusuf Ender Osmanoğlu.
 
 .prep
-    org main
-    sts 1024
+    org __jasm_IL_entry_main__
+    sts 1032
     sth 1024
-.body\n")?;
+.body
+    __jasm_IL_entry_main__:
+        cal main
+        jmp __jasm_IL_end__
+")?;
 
         // turn AST into bytecode
         let src = std::fs::read_to_string(source)?;
@@ -184,7 +188,7 @@ pub fn run(source: &str, out: &mut File) -> Result<(), LoxError> {
 
     let mut interpreter = Interpreter::new(&expr_pool, &mut symbol_table, locals);
     interpreter.interpret(&statements);
-    interpreter.gen_il(&statements, out);
+    interpreter.gen_il(&statements, out, None);
 
     Ok(())
 }

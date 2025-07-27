@@ -33,7 +33,7 @@ impl<'a> Scanner<'a> {
         let _ = &self.tokens.push(Token::new(
             TokenType::Eof,
             Symbol(0),
-            Literal::Nil,
+            Literal::Void,
             self.line,
         ));
     }
@@ -44,23 +44,23 @@ impl<'a> Scanner<'a> {
 
     fn scan_token(&mut self) {
         match self.advance() {
-            '(' => self.add_token(TokenType::LeftParen, Literal::Nil),
-            ')' => self.add_token(TokenType::RightParen, Literal::Nil),
-            '{' => self.add_token(TokenType::LeftBrace, Literal::Nil),
-            '}' => self.add_token(TokenType::RightBrace, Literal::Nil),
-            ',' => self.add_token(TokenType::Comma, Literal::Nil),
-            '.' => self.add_token(TokenType::Dot, Literal::Nil),
-            '-' => self.add_token(TokenType::Minus, Literal::Nil),
-            '+' => self.add_token(TokenType::Plus, Literal::Nil),
-            ';' => self.add_token(TokenType::Semicolon, Literal::Nil),
-            '*' => self.add_token(TokenType::Star, Literal::Nil),
+            '(' => self.add_token(TokenType::LeftParen, Literal::Void),
+            ')' => self.add_token(TokenType::RightParen, Literal::Void),
+            '{' => self.add_token(TokenType::LeftBrace, Literal::Void),
+            '}' => self.add_token(TokenType::RightBrace, Literal::Void),
+            ',' => self.add_token(TokenType::Comma, Literal::Void),
+            '.' => self.add_token(TokenType::Dot, Literal::Void),
+            '-' => self.add_token(TokenType::Minus, Literal::Void),
+            '+' => self.add_token(TokenType::Plus, Literal::Void),
+            ';' => self.add_token(TokenType::Semicolon, Literal::Void),
+            '*' => self.add_token(TokenType::Star, Literal::Void),
             '!' => {
                 let token_type = if self.match_operators('=') {
                     TokenType::BangEqual
                 } else {
                     TokenType::Bang
                 };
-                self.add_token(token_type, Literal::Nil);
+                self.add_token(token_type, Literal::Void);
             }
             '=' => {
                 let token_type = if self.match_operators('=') {
@@ -68,7 +68,7 @@ impl<'a> Scanner<'a> {
                 } else {
                     TokenType::Equal
                 };
-                self.add_token(token_type, Literal::Nil);
+                self.add_token(token_type, Literal::Void);
             }
             '<' => {
                 let token_type = if self.match_operators('=') {
@@ -76,7 +76,7 @@ impl<'a> Scanner<'a> {
                 } else {
                     TokenType::Less
                 };
-                self.add_token(token_type, Literal::Nil);
+                self.add_token(token_type, Literal::Void);
             }
             '>' => {
                 let token_type = if self.match_operators('=') {
@@ -84,7 +84,7 @@ impl<'a> Scanner<'a> {
                 } else {
                     TokenType::Greater
                 };
-                self.add_token(token_type, Literal::Nil);
+                self.add_token(token_type, Literal::Void);
             }
             '/' => {
                 if self.match_operators('/') {
@@ -95,7 +95,7 @@ impl<'a> Scanner<'a> {
                 } else if self.match_operators('*') {
                     self.block_comment();
                 } else {
-                    self.add_token(TokenType::Slash, Literal::Nil);
+                    self.add_token(TokenType::Slash, Literal::Void);
                 }
             }
             ' ' | '\r' | '\t' => (),
@@ -254,7 +254,7 @@ impl<'a> Scanner<'a> {
             _ => TokenType::Identifier,
         };
 
-        self.add_token(token_type, Literal::Nil);
+        self.add_token(token_type, Literal::Void);
     }
 }
 
@@ -417,7 +417,7 @@ mod tests {
 
         for (token, expected_type) in scanner.tokens.iter().zip(expected_types.iter()) {
             assert_eq!(token.token_type, *expected_type);
-            assert!(matches!(token.literal, Literal::Nil));
+            assert!(matches!(token.literal, Literal::Void));
         }
 
         // Extract and resolve symbols

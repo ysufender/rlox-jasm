@@ -61,7 +61,7 @@ impl Callable for LoxFunction {
         match interpreter.evaluate_block_stmt(&self.body, Some(environment)) {
             Err(RuntimeError::Return(value)) => self.handle_return(value, interpreter.symbol_table),
             Err(err) => Err(err), // Propagate other errors
-            Ok(_) => self.handle_return(LoxValue::Nil, interpreter.symbol_table),
+            Ok(_) => self.handle_return(LoxValue::Void, interpreter.symbol_table),
         }
     }
 

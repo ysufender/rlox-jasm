@@ -88,8 +88,9 @@ pub enum Literal {
     Num(Hf64),
     True,
     False,
-    Nil,
+    Void,
 }
+
 
 pub struct ErrorToken {
     pub token_type: TokenType,
@@ -133,7 +134,7 @@ impl fmt::Display for Token {
         let literal = match &self.literal {
             Literal::Str(str) => str.clone(),
             Literal::Num(num) => num.to_string(),
-            Literal::Nil => "".to_string(),
+            Literal::Void => "".to_string(),
             Literal::True => "true".to_string(),
             Literal::False => "false".to_string(),
         };
