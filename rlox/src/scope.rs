@@ -18,8 +18,8 @@ pub struct Scope {
 
 impl Scope {
     pub fn new(parent: Option<ScopeRef>, gen: Option<usize>, name: Option<Symbol>) -> Scope {
-        let genereation = if let Some(ref p) = parent { p.borrow().gen()+1 }
-                          else if let Some(g) = gen { g }
+        let genereation = if let Some(g) = gen { g }
+                          else if let Some(ref p) = parent { p.borrow().gen()+1 }
                           else { 1 };
         Scope {
             parent: parent,

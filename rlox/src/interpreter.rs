@@ -142,7 +142,14 @@ impl<'a> Interpreter<'a> {
                                 "cal 0x0",
                                 "dcr %b &flg 1",
                                 "sub %i &sp &ecx",
-                                "mov &ecx &sp"
+                                "mov &ecx &sp",
+                                "mov &ebx",
+                                "pop %i",
+                                "rda %i",
+                                "mov &ecx",
+                                "pop %i",
+                                "inc %i &ecx 4",
+                                "del"
                             )?;
                         }
                         _ => return Err(LoxError::CompilationError("Expected string".into()))
@@ -157,12 +164,36 @@ impl<'a> Interpreter<'a> {
                     } else { return Err(LoxError::CompilationError("Expected identifier".into())); },
                 Stmt::Block { statements } => { 
                     generate!(out, scope.borrow().gen(), "#block#")?;
-                    let b_scope = Rc::new(RefCell::new(Scope::new(Some(scope.clone()), None, None)));
+                    let b_scope = Rc::new(RefCell::new(Scope::new(Some(scope.clone()), Some(scope.borrow().gen()), None)));
                     let _ = self.gen_il(&statements, out, Some(b_scope.clone()))?;
-                    generate!(out, scope.borrow().gen()+1, f!("dcr %i &sp {}", b_scope.borrow().pos()))?;
+                    generate!(out, scope.borrow().gen(), f!("dcr %i &sp {}", b_scope.borrow().pos()))?;
                 }
                 Stmt::If { condition: _, then_branch: _, else_branch : _} => return Ok(LoxValue::Void),
-                Stmt::While { condition: _, body : _} => return Ok(LoxValue::Void),
+                Stmt::While { condition, body } => {
+                    let while_start = self.gen_label("_while_start"); 
+                    let while_body = self.gen_label("_while_body");
+                    let while_end = self.gen_label("_while_end");
+                    let while_scope = Rc::new(RefCell::new(Scope::new(Some(scope.clone()), None, None)));
+                    generate!(out, scope.borrow().gen(), "#while loop#", f!("{}:", while_start))?;
+                    let condition_val = self.handle_expression(self.expr_pool.get_expr(*condition), out, while_scope.clone())?;
+                    if discriminant(&condition_val) != discriminant(&LoxValue::Boolean(false)) {
+                        return Err(LoxError::CompilationError("Expected boolean for the conditional.".into()))
+                    }
+                    generate!(out, while_scope.borrow().gen(),
+                        "mov &bl",
+                        "pop %b",
+                        f!("cnd {}", while_body),
+                        f!("jmp {}", while_end),
+                        f!("{}:", while_body)
+                    )?;
+                    let _ = self.gen_il(&[body.as_ref().clone()], out, Some(while_scope.clone()))?;
+                    generate!(out, while_scope.borrow().gen(),
+                        f!("jmp {}", while_start),
+                    )?;
+                    generate!(out, scope.borrow().gen(),
+                        f!("{}:", while_end)
+                    )?;
+                },
                 Stmt::Function { name, params, return_type, body } => {
                     let var = self.symbol_table.resolve(name.lexeme);
                     generate!(out, scope.borrow().gen(), 
@@ -301,7 +332,7 @@ impl<'a> Interpreter<'a> {
                             "ldc %i",
                             "pop %i"
                         )?;
-                        Ok(LoxValue::Void)
+                        Ok(val)
                     },
                     LoxValue::Void => Err(LoxError::CompilationError("Void assignation is not permitted.".into())),
                     LoxValue::Callable(_) => Err(LoxError::CompilationError("Can't assign functions to things.".into())),
@@ -313,7 +344,7 @@ impl<'a> Interpreter<'a> {
                             if val.size() == 1 { "ldc %b" } else { "ldc %i" },
                             if val.size() == 1 { "pop %b" } else { "pop %i" },
                         )?;
-                        Ok(LoxValue::Void)
+                        Ok(val)
                     }
                 }
             },

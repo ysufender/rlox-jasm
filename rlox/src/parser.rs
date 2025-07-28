@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use crate::expr::{Expr, ExprIdx, ExprPool};
 use crate::lexer::token::{ErrorToken, Hf64, Literal, Token, TokenType};
 use crate::lox;
@@ -233,7 +235,7 @@ impl<'a> Parser<'a> {
 
         Ok(Stmt::While {
             condition,
-            body: Box::new(body),
+            body: Rc::new(body),
         })
     }
 
@@ -283,7 +285,7 @@ impl<'a> Parser<'a> {
         if let Some(condition_expr_idx) = condition {
             body = Stmt::While {
                 condition: condition_expr_idx,
-                body: Box::new(body),
+                body: Rc::new(body),
             };
         }
 
@@ -301,10 +303,10 @@ impl<'a> Parser<'a> {
         let condition = self.expression()?;
         self.consume(TokenType::RightParen, "Expect ')' after if condition.")?;
 
-        let then_branch = Box::new(self.statement()?);
+        let then_branch = Rc::new(self.statement()?);
         let mut else_branch = None;
         if self.match_types(&[TokenType::Else]) {
-            else_branch = Some(Box::new(self.statement()?));
+            else_branch = Some(Rc::new(self.statement()?));
         }
 
         Ok(Stmt::If {

@@ -1,77 +1,12 @@
-fun test(a, b) {
+fun test() {
     return "Hello World";
 }
 
 fun main() {
-    var n = 5;
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
+    var n = true;
+    while (n) {
+        print(test());
+    }
 }
 
 main();

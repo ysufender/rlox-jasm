@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use crate::expr::ExprIdx;
 use crate::lexer::token::Token;
 use crate::lox_value::LoxValue;
@@ -19,12 +21,12 @@ pub enum Stmt {
     },
     If {
         condition: ExprIdx,
-        then_branch: Box<Stmt>,
-        else_branch: Option<Box<Stmt>>,
+        then_branch: Rc<Stmt>,
+        else_branch: Option<Rc<Stmt>>,
     },
     While {
         condition: ExprIdx,
-        body: Box<Stmt>,
+        body: Rc<Stmt>,
     },
     Function {
         name: Token,

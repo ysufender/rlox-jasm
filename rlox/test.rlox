@@ -1,75 +1,10 @@
-fn test(a: num, b: bool) -> str {
+fn test() -> str {
     return "Hello World";
 }
 
 fn main() -> void {
-    let n: num = 5;
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
-    print(test(n, false));
+    let a: bool = true;
+    while (a) {
+        print(test());
+    }
 }

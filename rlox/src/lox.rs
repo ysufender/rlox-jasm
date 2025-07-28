@@ -117,8 +117,8 @@ rlox-jasm, JASM IL and Bytecode generation for rlox by Yusuf Ender Osmanoğlu.
 
 .prep
     org __jasm_IL_entry_main__
-    sts 1032
-    sth 1024
+    sts #1032# 32
+    sth #1024# 32
 .body
     __jasm_IL_entry_main__:
         cal main
@@ -127,7 +127,7 @@ rlox-jasm, JASM IL and Bytecode generation for rlox by Yusuf Ender Osmanoğlu.
 
         // turn AST into bytecode
         let src = std::fs::read_to_string(source)?;
-        let result = run(&src, &mut output);
+        let result = compile(&src, &mut output);
 
         if result.is_err() {
             return Err(result.unwrap_err());
@@ -166,7 +166,7 @@ pub fn run_prompt() -> Result<(), LoxError> {
     Ok(())
 }
 
-pub fn run(source: &str, out: &mut File) -> Result<(), LoxError> {
+pub fn compile(source: &str, out: &mut File) -> Result<(), LoxError> {
     let mut symbol_table = SymbolTable::new(); // For the lexer.
     let lexer_tokens = {
         let mut lexer = scanner::Scanner::new(source, &mut symbol_table);
