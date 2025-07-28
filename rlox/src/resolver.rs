@@ -78,8 +78,9 @@ impl<'a> Resolver<'a> {
             Stmt::While { condition, body } => self.while_stmt(*condition, body),
             Stmt::Function { name, params, return_type, body } => self.function_stmt(name, params, body),
             Stmt::Return { keyword, value } => {
-                let value_idx = value.as_ref().copied();
-                self.return_stmt(keyword, value_idx);
+                return;
+                /*let value_idx = value.as_ref().copied();
+                self.return_stmt(keyword, value_idx);*/
             }
             Stmt::Class {
                 name,

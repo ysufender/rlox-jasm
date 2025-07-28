@@ -23,3 +23,7 @@ rlox-bytecode/target/
 *.jasm
 *.jo
 *.jef
+*.stc
+*.data*
+*.perf*
+rlox-ast

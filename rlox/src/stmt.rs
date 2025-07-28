@@ -1,5 +1,6 @@
 use crate::expr::ExprIdx;
 use crate::lexer::token::Token;
+use crate::lox_value::LoxValue;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Stmt {
@@ -28,12 +29,12 @@ pub enum Stmt {
     Function {
         name: Token,
         params: Vec<Token>,
-        return_type: Vec<Token>,
+        return_type: LoxValue,
         body: Vec<Stmt>,
     },
     Return {
         keyword: Token,
-        value: Vec<Token>,
+        value: Option<ExprIdx>,
     },
     Class {
         name: Token,

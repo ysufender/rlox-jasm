@@ -58,11 +58,12 @@ impl Callable for LoxFunction {
         }
 
         // Execute the function body
-        match interpreter.evaluate_block_stmt(&self.body, Some(environment)) {
+        unreachable!();
+        /*match interpreter.evaluate_block_stmt(&self.body, Some(environment)) {
             Err(RuntimeError::Return(value)) => self.handle_return(value, interpreter.symbol_table),
             Err(err) => Err(err), // Propagate other errors
             Ok(_) => self.handle_return(LoxValue::Void, interpreter.symbol_table),
-        }
+        }*/
     }
 
 

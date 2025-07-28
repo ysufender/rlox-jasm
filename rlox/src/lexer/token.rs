@@ -3,6 +3,7 @@ use std::hash::Hash;
 
 use rust_decimal::Decimal;
 use rust_decimal::prelude::{FromPrimitive, ToPrimitive};
+use crate::lox_value::LoxValue;
 use crate::symbol::{Symbol, SymbolTable};
 
 #[derive(Debug, Clone, Hash, Eq, PartialEq)]
@@ -105,7 +106,6 @@ pub enum Literal {
     Void,
 }
 
-
 pub struct ErrorToken {
     pub token_type: TokenType,
     pub lexeme: String,
@@ -138,6 +138,7 @@ impl From<Token> for Literal {
             TokenType::String => Self::Str("".into()),
             TokenType::Number => Self::Num(0f64.into()),
             TokenType::Bool => Self::False,
+            TokenType::Void => Self::Void,
             _ => unreachable!()
         }
     }

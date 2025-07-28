@@ -9,7 +9,7 @@ use crate::lox_callable::lox_class::LoxClass;
 use crate::lox_callable::lox_function::LoxFunction;
 use crate::lox_callable::lox_instance::LoxInstance;
 use crate::lox_callable::callable::Callable;
-use crate::symbol::SymbolTable;
+use crate::symbol::{Symbol, SymbolTable};
 
 #[derive(Debug)]
 pub enum LoxValueError {
@@ -47,6 +47,7 @@ pub enum LoxValue {
     Boolean(bool),
     Number(f64),
     String(String),
+    Fn(Symbol),
     Callable(LoxCallable),
     Variable(usize, usize)
 }
@@ -58,8 +59,7 @@ impl LoxValue {
             LoxValue::Number(_) => 4,
             LoxValue::Boolean(_) => 1,
             LoxValue::Variable(_, size) => *size,
-            LoxValue::Void => 0,
-            LoxValue::Callable(_) => 0
+            _ => 0
         }
     }
 
@@ -70,7 +70,8 @@ impl LoxValue {
             LoxValue::Boolean(_) => "bool".into(),
             LoxValue::Variable(_, _) => "ref".into(),
             LoxValue::Void => "void".into(),
-            LoxValue::Callable(n) => n.get_name()
+            LoxValue::Callable(n) => n.get_name(),
+            LoxValue::Fn(n) => format!("fn {}", n) 
         }
     }
 }
@@ -184,6 +185,7 @@ impl From<&Literal> for LoxValue {
     }
 }
 
+
 impl Callable for LoxCallable {
     fn arity(&self, symbol_table: &mut SymbolTable) -> usize {
         match self {
@@ -242,7 +244,7 @@ impl fmt::Display for LoxValue {
                 str_num
             }
             LoxValue::Boolean(bool) => bool.to_string(),
-            LoxValue::Void => "nil".to_string(),
+            LoxValue::Void => "void".to_string(),
             LoxValue::Callable(callable) => {
                 let name = match callable {
                     LoxCallable::Function(function) => {

@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::error::Error;
 use std::fmt;
 use std::fs::File;
@@ -7,13 +8,11 @@ use std::io;
 use std::io::{stdin, stdout, BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
 
-use crate::expr::ExprIdx;
+
 use crate::interpreter::{Interpreter, RuntimeError};
 use crate::lexer::scanner;
 use crate::lexer::token::{ErrorToken, TokenType};
 use crate::parser::Parser;
-use crate::resolver::Resolver;
-use crate::scope::Scope;
 use crate::symbol::SymbolTable;
 
 #[derive(Debug)]
@@ -53,18 +52,6 @@ fn check_errors() -> Result<(), LoxError> {
         }
         if HAD_RUNTIME_ERROR {
             return Err(LoxError::RuntimeError("Runtime error".to_string()));
-        }
-    }
-    Ok(())
-}
-
-pub fn interpret_files(files: &[&str]) -> Result<(), LoxError> {
-    for file in files {
-        let src = std::fs::read_to_string(file)?;
-        let result = run_interpret(&src);
-
-        if result.is_err() {
-            return Err(result.unwrap_err());
         }
     }
     Ok(())
@@ -179,27 +166,6 @@ pub fn run_prompt() -> Result<(), LoxError> {
     Ok(())
 }
 
-pub fn run_interpret(source: &str) -> Result<(), LoxError> {
-    let mut symbol_table = SymbolTable::new();
-    let lexer_tokens = {
-        let mut lexer = scanner::Scanner::new(source, &mut symbol_table);
-        lexer.scan_tokens();
-
-        lexer.tokens
-    };
-    let parser = Parser::new(&symbol_table, lexer_tokens);
-    let (statements, expr_pool) = parser
-        .parse()
-        .map_err(|_| LoxError::Error("Error during parsing".to_string()))?;
-    check_errors()?;
-
-    let locals = Resolver::new(&expr_pool, &mut symbol_table).resolve_lox(&statements);
-
-    let mut interpreter = Interpreter::new(&expr_pool, &mut symbol_table, locals);
-    interpreter.interpret(&statements);
-    Ok(())
-}
-
 pub fn run(source: &str, out: &mut File) -> Result<(), LoxError> {
     let mut symbol_table = SymbolTable::new(); // For the lexer.
     let lexer_tokens = {
@@ -214,9 +180,9 @@ pub fn run(source: &str, out: &mut File) -> Result<(), LoxError> {
         .map_err(|_| LoxError::Error("Error during parsing".into()))?;
     check_errors()?;
 
-    let locals = Resolver::new(&expr_pool, &mut symbol_table).resolve_lox(&statements);
+    //let locals = Resolver::new(&expr_pool, &mut symbol_table).resolve_lox(&statements);
 
-    let mut interpreter = Interpreter::new(&expr_pool, &mut symbol_table, locals);
+    let mut interpreter = Interpreter::new(&expr_pool, &mut symbol_table);
     interpreter.gen_il(&statements, out, None)?;
     Ok(())
 }

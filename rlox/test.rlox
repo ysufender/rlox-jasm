@@ -1,10 +1,75 @@
-fn test() -> (str, num) {
-    return;
+fn test(a: num, b: bool) -> str {
+    return "Hello World";
 }
 
 fn main() -> void {
-    {
-        let a: str = "Hello";        
-    }
-    let b: str = "World";
+    let n: num = 5;
+    print(test(n, false));
+    print(test(n, false));
+    print(test(n, false));
+    print(test(n, false));
+    print(test(n, false));
+    print(test(n, false));
+    print(test(n, false));
+    print(test(n, false));
+    print(test(n, false));
+    print(test(n, false));
+    print(test(n, false));
+    print(test(n, false));
+    print(test(n, false));
+    print(test(n, false));
+    print(test(n, false));
+    print(test(n, false));
+    print(test(n, false));
+    print(test(n, false));
+    print(test(n, false));
+    print(test(n, false));
+    print(test(n, false));
+    print(test(n, false));
+    print(test(n, false));
+    print(test(n, false));
+    print(test(n, false));
+    print(test(n, false));
+    print(test(n, false));
+    print(test(n, false));
+    print(test(n, false));
+    print(test(n, false));
+    print(test(n, false));
+    print(test(n, false));
+    print(test(n, false));
+    print(test(n, false));
+    print(test(n, false));
+    print(test(n, false));
+    print(test(n, false));
+    print(test(n, false));
+    print(test(n, false));
+    print(test(n, false));
+    print(test(n, false));
+    print(test(n, false));
+    print(test(n, false));
+    print(test(n, false));
+    print(test(n, false));
+    print(test(n, false));
+    print(test(n, false));
+    print(test(n, false));
+    print(test(n, false));
+    print(test(n, false));
+    print(test(n, false));
+    print(test(n, false));
+    print(test(n, false));
+    print(test(n, false));
+    print(test(n, false));
+    print(test(n, false));
+    print(test(n, false));
+    print(test(n, false));
+    print(test(n, false));
+    print(test(n, false));
+    print(test(n, false));
+    print(test(n, false));
+    print(test(n, false));
+    print(test(n, false));
+    print(test(n, false));
+    print(test(n, false));
+    print(test(n, false));
+    print(test(n, false));
 }
