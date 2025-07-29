@@ -73,7 +73,8 @@ pub struct Interpreter<'a> {
     //locals: FxHashMap<ExprIdx, usize>,
     expr_pool: &'a ExprPool,
     pub symbol_table: &'a mut SymbolTable,
-    counter: usize
+    counter: usize,
+    last_sym: String
 }
 
 impl<'a> Interpreter<'a> {
@@ -91,13 +92,15 @@ impl<'a> Interpreter<'a> {
             //locals,
             expr_pool,
             symbol_table,
-            counter: 0
+            counter: 0,
+            last_sym: String::new() 
         }
     }
 
     pub fn gen_label(&mut self, pre: &str) -> String {
         let c = self.counter;
         self.counter += 1;
+        self.last_sym = f!("{}{}", pre, c);
         f!("{}{}", pre, c)
     }
 
@@ -168,11 +171,36 @@ impl<'a> Interpreter<'a> {
                     let _ = self.gen_il(&statements, out, Some(b_scope.clone()))?;
                     generate!(out, scope.borrow().gen(), f!("dcr %i &sp {}", b_scope.borrow().pos()))?;
                 }
-                Stmt::If { condition: _, then_branch: _, else_branch : _} => return Ok(LoxValue::Void),
+                Stmt::If { condition, then_branch, else_branch} => {
+                    let if_br = self.gen_label("_if_"); 
+                    let else_br = self.gen_label("_else_"); 
+                    let if_scope = Rc::new(RefCell::new(Scope::new(Some(scope.clone()), None, None)));
+                    generate!(out, scope.borrow().gen(), "#if statement#")?;
+                    let conditional = self.handle_expression(self.expr_pool.get_expr(*condition), out, if_scope.clone())?;
+                    if discriminant(&conditional) != discriminant(&LoxValue::Boolean(false)) {
+                        return Err(LoxError::CompilationError("Expected boolean for the conditional.".into()))
+                    }
+                    generate!(out, if_scope.borrow().gen(),
+                        "mov &bl",
+                        "pop %b",
+                        f!("cnd {}", if_br),
+                        f!("jmp {}", else_br),
+                        f!("{}:", if_br)
+                    )?;
+                    let _ = self.gen_il(&[then_branch.as_ref().clone()], out, Some(if_scope.clone()))?;
+                    generate!(out, if_scope.borrow().gen(),
+                        f!("{}:", else_br)
+                    )?;
+                    if let Some(else_branch) = else_branch {
+                        generate!(out, scope.borrow().gen(), "#else statement#")?;
+                        let else_scope = Rc::new(RefCell::new(Scope::new(Some(scope.clone()), None, None)));
+                        let _ = self.gen_il(&[else_branch.as_ref().clone()], out, Some(else_scope.clone()))?;
+                    }
+                },
                 Stmt::While { condition, body } => {
-                    let while_start = self.gen_label("_while_start"); 
-                    let while_body = self.gen_label("_while_body");
-                    let while_end = self.gen_label("_while_end");
+                    let while_start = self.gen_label("_while_start_"); 
+                    let while_body = self.gen_label("_while_body_");
+                    let while_end = self.gen_label("_while_end_");
                     let while_scope = Rc::new(RefCell::new(Scope::new(Some(scope.clone()), None, None)));
                     generate!(out, scope.borrow().gen(), "#while loop#", f!("{}:", while_start))?;
                     let condition_val = self.handle_expression(self.expr_pool.get_expr(*condition), out, while_scope.clone())?;

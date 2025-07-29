@@ -19,8 +19,8 @@ IL and Bytecode generation from rlox AST.
 |:----------------------------------------------------:|:------:|
 |        IL Representations of Basic Operations        |   ⏳   |
 |               Variables on Stack and Heap            |   ✅   |
-|             Statements and jumping around            |   ⏳   |
-|                  Function Signatures                 |   ⏳   |
+|             Statements and jumping around            |   ✅   |
+|                  Function Signatures                 |   ✅   |
 |              Stack and Heap Estimations              |   ⏳   |
 |       Non-inheritance Classes (Basic Structs)        |   ⏳   |
 |                Inheritance and VTables               |   ⏳   |

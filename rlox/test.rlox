@@ -6,5 +6,6 @@ fn main() -> void {
     let a: bool = true;
     while (a) {
         print(test());
+        a = false;
     }
 }
