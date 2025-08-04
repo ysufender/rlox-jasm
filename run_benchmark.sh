@@ -5,11 +5,9 @@ set -o nounset
 set -o pipefail
 # set -o xtrace
 
-printf "\nBe aware that this benchmark only runs in debug mode for now.\n\n"
-
 ROOT_DIR=$(dirname "$0")
 
-LOX=${LOX:-${ROOT_DIR}/rlox/target/debug/rlox-jasm}
+LOX=${LOX:-${ROOT_DIR}/rlox/target/release/rlox-jasm}
 
 # Print table header
 printf "| %-20s | %-18s |\n" "File" "Took (s)"

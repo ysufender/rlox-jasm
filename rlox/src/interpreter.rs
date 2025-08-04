@@ -144,15 +144,7 @@ impl<'a> Interpreter<'a> {
                                 "mov &ecx &bl",
                                 "cal 0x0",
                                 "dcr %b &flg 1",
-                                "sub %i &sp &ecx",
-                                "mov &ecx &sp",
-                                "mov &ebx",
                                 "pop %i",
-                                "rda %i",
-                                "mov &ecx",
-                                "pop %i",
-                                "inc %i &ecx 4",
-                                "del"
                             )?;
                         }
                         _ => return Err(LoxError::CompilationError("Expected string".into()))
@@ -288,6 +280,7 @@ impl<'a> Interpreter<'a> {
                 if lhs.r#type() != rhs.r#type() { return Err(LoxError::CompilationError("Operand type missmatch.".into())) }
                 match operator.token_type {
                     TokenType::Plus => {generate!(out, scope.borrow().gen(), "add %f")?; Ok(lhs)},
+                    TokenType::Less => { generate!(out, scope.borrow().gen(), "cmp %f %les", "pop %i", "pop %i", "rda &bl")?; Ok(LoxValue::Boolean(false)) }
                     _ => todo!("Not Yet")
                 }
             },

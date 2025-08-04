@@ -117,8 +117,8 @@ rlox-jasm, JASM IL and Bytecode generation for rlox by Yusuf Ender Osmanoğlu.
 
 .prep
     org __jasm_IL_entry_main__
-    sts #1032# 32
-    sth #1024# 32
+    sts 1032
+    sth 1024
 .body
     __jasm_IL_entry_main__:
         cal main

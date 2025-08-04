@@ -1,11 +1,8 @@
-fn test() -> str {
-    return "Hello World";
-}
-
 fn main() -> void {
-    let a: bool = true;
-    while (a) {
-        print(test());
-        a = false;
+    let a: str = "Hello World";
+    let b: num = 0;
+    while (b < 150000) {
+        print(a);
+        b = b + 1;
     }
 }

@@ -1,12 +1,10 @@
-fun test() {
-    return "Hello World";
-}
-
 fun main() {
-    var n = true;
-    while (n) {
-        print(test());
-    }
+    var a = "Hello World";
+    var b = 0;
+    while (b < 150000) {
+            print(a);
+            b = b + 1;
+        }
 }
 
 main();
