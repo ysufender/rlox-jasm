@@ -12,6 +12,10 @@ This repo is forked from [rlox by Emirhan Tala](https://github.com/Emivvvvv/rlox
 > this repo includes both JASM and CSR repos to build and invoke them from rlox-jasm. Sorry
 > for the inconvenience.
 
+> Another Important Note:
+> Due to performance problems with CSR, I'm curerntly focusing on it so therefore this project
+> won't be getting that much of updates. 
+
 # rlox-jasm roadmap
 IL and Bytecode generation from rlox AST.  
 
